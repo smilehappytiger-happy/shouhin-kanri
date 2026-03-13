@@ -280,28 +280,28 @@ window.addEventListener('unhandledrejection', function(event) {
 });
 
 
-// ★【改修】GASのセキュリティブロックをすり抜ける最強の通信設定
+// ★【修正】ブラウザの通信ブロックを完璧に回避する設定
 async function fetchGAS(action, payload = {}) {
-  // あえて headers を空にすることで、ブラウザのCORSチェックを無効化します
   const options = {
     method: 'POST',
-    redirect: 'follow', // GASのリダイレクトに追従するために必須
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8" // この1行が超重要です！
+    },
+    redirect: 'follow',
     body: JSON.stringify({ action: action, ...payload })
   };
   
   const response = await fetch(GAS_API_URL, options);
-  const text = await response.text(); // いきなりJSONにせず、一旦テキストで受け取る
+  const text = await response.text(); 
   
   try {
     const data = JSON.parse(text);
     if (!data.success) throw new Error(data.message || "処理に失敗しました");
     return data;
   } catch (e) {
-    // 万が一GASのURLが間違っていてHTMLが返ってきても、画面に原因を表示します
     throw new Error("GASからの応答エラー: " + text.substring(0, 150) + "..."); 
   }
 }
-
 var app = {
   role: null,
   token: null,
@@ -903,3 +903,4 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
