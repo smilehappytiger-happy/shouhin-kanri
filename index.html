@@ -263,7 +263,7 @@
 // ====================================================================
 // ★★★ 超重要：STEP1で取得したGASのURLを必ず貼り付けてください ★★★
 // ====================================================================
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwHhQ1QH5tcxfGd5FFxHwGxiCP4MMdkeXG8vdqjjin7T13aZLnW5SNJOwRUSTvNWpfYKg/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxu8v67-MsFxWGalvMTCM-a378EYZ3RVV0JiFJTVzQKZCS1yKik72E2iKn6NeW7pmSbxg/exec";
 const SHOP_EMAIL = "shop@example.com"; 
 
 
@@ -280,15 +280,12 @@ window.addEventListener('unhandledrejection', function(event) {
 });
 
 
-// ★【究極の修正】フォーム送信を偽装してCORSブロックを100%回避する設定
+// ★ 究極にシンプルな通信（ヘッダーを一切書かないことでCORSを回避）
 async function fetchGAS(action, payload = {}) {
-  // データをURLエンコード（お問い合わせフォーム等と同じ形式）に変換する魔法
-  const formData = new URLSearchParams();
-  formData.append('payload', JSON.stringify({ action: action, ...payload }));
-
   const options = {
     method: 'POST',
-    body: formData // headersはあえて書かず、ブラウザに自動判定させる！
+    // headersは絶対に追加しないでください！ブラウザに自動判定させます。
+    body: JSON.stringify({ action: action, ...payload })
   };
   
   const response = await fetch(GAS_API_URL, options);
@@ -299,7 +296,7 @@ async function fetchGAS(action, payload = {}) {
     if (!data.success) throw new Error(data.message || "処理に失敗しました");
     return data;
   } catch (e) {
-    throw new Error("GASからの応答エラー: " + text.substring(0, 150) + "..."); 
+    throw new Error("GAS応答エラー: " + text.substring(0, 100) + "..."); 
   }
 }
 
@@ -916,5 +913,6 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
 
 
