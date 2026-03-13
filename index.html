@@ -261,20 +261,22 @@
 
 <script>
 // ====================================================================
-// ★★★ 修正：自己診断機能の奥で使われていたため、ダミーのURLを復活させます ★★★
+// ★ 完璧に発行された新しいGASのURLで、直接通信を行います！
 // ====================================================================
-const GAS_API_URL = "/api/gas"; // ★この1行を追加！！！
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwZ9kgOMzOKLyHl-LQYR8dDmIp-JBgB0BSiNjqZt-k-dnDDFEYWCXY_HmvhUoimJczU_g/exec";
 const SHOP_EMAIL = "shop@example.com"; 
 
-// ★ Vercelの中継サーバー(/api/gas)へ通信するよう変更
+// ★ ブラウザからGASへ直接、CORSを公式に通過する「text/plain」で通信
 async function fetchGAS(action, payload = {}) {
   const options = {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
     body: JSON.stringify({ action: action, ...payload })
   };
   
-  const response = await fetch(GAS_API_URL, options); // ★ここも/api/gasに繋がります
+  const response = await fetch(GAS_API_URL, options);
   const data = await response.json(); 
   
   if (!data.success) throw new Error(data.message || "処理に失敗しました");
@@ -927,6 +929,7 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
 
 
 
