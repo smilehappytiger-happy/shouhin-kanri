@@ -261,13 +261,26 @@
 
 <script>
 // ====================================================================
-// ★★★ 超重要：STEP1で取得したGASのURLを必ず貼り付けてください ★★★
+// ★ GASのURLは中継サーバー(api/gas.js)に隠したため、ここには不要になりました！最高に安全です。
 // ====================================================================
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxu8v67-MsFxWGalvMTCM-a378EYZ3RVV0JiFJTVzQKZCS1yKik72E2iKn6NeW7pmSbxg/exec";
 const SHOP_EMAIL = "shop@example.com"; 
 
+// ★ Vercelの中継サーバー(/api/gas)へ通信するよう変更
+async function fetchGAS(action, payload = {}) {
+  const options = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: action, ...payload })
+  };
+  
+  const response = await fetch('/api/gas', options);
+  const data = await response.json(); 
+  
+  if (!data.success) throw new Error(data.message || "処理に失敗しました");
+  return data;
+}
 
-// ★【追加】目に見えないエラーを強制的に画面に出す「自己診断機能」
+// 目に見えないエラーを強制的に画面に出す「自己診断機能」
 window.onerror = function(msg, url, line, col, error) {
   var splash = document.getElementById('init-splash');
   if (splash) splash.style.display = 'none';
@@ -913,6 +926,7 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
 
 
 
