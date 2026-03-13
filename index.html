@@ -280,15 +280,15 @@ window.addEventListener('unhandledrejection', function(event) {
 });
 
 
-// ★【修正】ブラウザの通信ブロックを完璧に回避する設定
+// ★【究極の修正】フォーム送信を偽装してCORSブロックを100%回避する設定
 async function fetchGAS(action, payload = {}) {
+  // データをURLエンコード（お問い合わせフォーム等と同じ形式）に変換する魔法
+  const formData = new URLSearchParams();
+  formData.append('payload', JSON.stringify({ action: action, ...payload }));
+
   const options = {
     method: 'POST',
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8" // この1行が超重要です！
-    },
-    redirect: 'follow',
-    body: JSON.stringify({ action: action, ...payload })
+    body: formData // headersはあえて書かず、ブラウザに自動判定させる！
   };
   
   const response = await fetch(GAS_API_URL, options);
@@ -302,6 +302,19 @@ async function fetchGAS(action, payload = {}) {
     throw new Error("GASからの応答エラー: " + text.substring(0, 150) + "..."); 
   }
 }
+
+// ★ 目に見えないエラーを強制的に画面に出す「自己診断機能」
+window.onerror = function(msg, url, line, col, error) {
+  var splash = document.getElementById('init-splash');
+  if (splash) splash.style.display = 'none';
+  app.showAlert("【システムエラー発生】\n" + msg + "\n(Line: " + line + ")");
+};
+window.addEventListener('unhandledrejection', function(event) {
+  var splash = document.getElementById('init-splash');
+  if (splash) splash.style.display = 'none';
+  app.showAlert("【通信エラー発生】\n" + (event.reason.message || event.reason));
+});
+  
 var app = {
   role: null,
   token: null,
@@ -903,4 +916,5 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
 
