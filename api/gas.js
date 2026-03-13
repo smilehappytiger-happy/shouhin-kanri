@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   // ★★★ ここに最新のGASのURL(デプロイID)を貼り付けてください ★★★
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbxu8v67-MsFxWGalvMTCM-a378EYZ3RVV0JiFJTVzQKZCS1yKik72E2iKn6NeW7pmSbxg/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbwZ9kgOMzOKLyHl-LQYR8dDmIp-JBgB0BSiNjqZt-k-dnDDFEYWCXY_HmvhUoimJczU_g/exec";
 
   try {
     // Vercelの裏側サーバーからGASへ通信（ブラウザのCORS制限を受けない最強の通信！）
