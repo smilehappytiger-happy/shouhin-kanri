@@ -261,8 +261,9 @@
 
 <script>
 // ====================================================================
-// ★ GASのURLは中継サーバー(api/gas.js)に隠したため、ここには不要になりました！最高に安全です。
+// ★★★ 修正：自己診断機能の奥で使われていたため、ダミーのURLを復活させます ★★★
 // ====================================================================
+const GAS_API_URL = "/api/gas"; // ★この1行を追加！！！
 const SHOP_EMAIL = "shop@example.com"; 
 
 // ★ Vercelの中継サーバー(/api/gas)へ通信するよう変更
@@ -273,7 +274,7 @@ async function fetchGAS(action, payload = {}) {
     body: JSON.stringify({ action: action, ...payload })
   };
   
-  const response = await fetch('/api/gas', options);
+  const response = await fetch(GAS_API_URL, options); // ★ここも/api/gasに繋がります
   const data = await response.json(); 
   
   if (!data.success) throw new Error(data.message || "処理に失敗しました");
@@ -926,6 +927,7 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
+
 
 
 
