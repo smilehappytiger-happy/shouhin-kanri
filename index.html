@@ -208,4 +208,387 @@
           <div class="d-flex gap-2 flex-wrap">
             <input type="radio" class="btn-check" name="edit-status" id="status-sale" value="販売中" autocomplete="off" checked>
             <label class="btn btn-outline-primary" for="status-sale"><i class="bi bi-shop me-1"></i>販売中</label>
-            <input type
+            <input type="radio" class="btn-check" name="edit-status" id="status-nego" value="商談中" autocomplete="off">
+            <label class="btn btn-outline-success" for="status-nego"><i class="bi bi-chat-dots me-1"></i>商談中</label>
+            <input type="radio" class="btn-check" name="edit-status" id="status-sold" value="Sold Out" autocomplete="off">
+            <label class="btn btn-outline-danger" for="status-sold"><i class="bi bi-x-circle me-1"></i>Sold Out</label>
+            <input type="radio" class="btn-check" name="edit-status" id="status-archive" value="非公開" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="status-archive"><i class="bi bi-eye-slash me-1"></i>非公開 (アーカイブ)</label>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label font-weight-bold">商品名</label>
+          <input type="text" id="edit-name" class="form-control form-control-lg" placeholder="未入力でも保存できます">
+        </div>
+        <div class="mb-3">
+          <label class="form-label font-weight-bold">サイズ</label>
+          <input type="text" id="edit-size" class="form-control form-control-lg" placeholder="例: 長さ4060mm×幅430mm×厚み73mm">
+        </div>
+        <div class="mb-3">
+          <label class="form-label font-weight-bold">ポイント</label>
+          <input type="text" id="edit-point" class="form-control form-control-lg">
+        </div>
+        <div class="mb-3">
+          <label class="form-label font-weight-bold">備考</label>
+          <textarea id="edit-remarks" class="form-control form-control-lg" rows="3"></textarea>
+        </div>
+        <div class="mb-4">
+          <label class="form-label font-weight-bold">写真の追加と名称編集 (複数可)</label>
+          <div class="d-flex gap-2 mb-3">
+            <button type="button" class="btn btn-primary flex-grow-1 btn-photo-select" onclick="document.getElementById('input-camera').click()">
+              <i class="bi bi-camera me-1"></i> カメラで撮影
+            </button>
+            <button type="button" class="btn btn-secondary flex-grow-1 btn-photo-select" onclick="document.getElementById('input-file').click()">
+              <i class="bi bi-folder2-open me-1"></i> 端末から選択
+            </button>
+          </div>
+          <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none;">
+          <input type="file" id="input-file" accept="image/*" multiple style="display:none;">
+          <small class="text-muted d-block mb-2">※大容量ファイルは自動的にリサイズされます。</small>
+          <div id="image-preview-area" class="border p-3 rounded bg-light" style="min-height:120px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);"></div>
+        </div>
+        <div class="d-grid gap-3 mt-5">
+          <button class="btn btn-success" style="padding: 1.5rem; font-size: 1.5rem; font-weight: bold;" onclick="app.saveProduct()">保存して反映する</button>
+          <button class="btn btn-secondary" style="padding: 1.2rem; font-size: 1.2rem; font-weight: bold;" onclick="app.showView('view-list')">キャンセルして戻る</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// ====================================================================
+// ★ Vercelフロントエンド 最終完全版スクリプト
+// ====================================================================
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwZ9kgOMzOKLyHl-LQYR8dDmIp-JBgB0BSiNjqZt-k-dnDDFEYWCXY_HmvhUoimJczU_g/exec";
+const SHOP_EMAIL = "shop@example.com"; 
+
+async function fetchGAS(action, payload = {}) {
+  const options = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    redirect: 'follow',
+    body: JSON.stringify({ action: action, ...payload })
+  };
+  
+  const response = await fetch(GAS_API_URL, options);
+  const text = await response.text(); 
+  
+  try {
+    const data = JSON.parse(text);
+    if (!data.success) throw new Error(data.message || "処理に失敗しました");
+    return data;
+  } catch (e) {
+    throw new Error("GAS応答エラー: " + text.substring(0, 100) + "..."); 
+  }
+}
+
+window.onerror = function(msg, url, line, col, error) {
+  var splash = document.getElementById('init-splash');
+  if (splash) splash.style.display = 'none';
+  if(typeof app !== 'undefined' && app.showAlert) {
+    app.showAlert("【システムエラー発生】\n" + msg + "\n(Line: " + line + ")");
+  } else {
+    alert("【システムエラー発生】\n" + msg + "\n(Line: " + line + ")");
+  }
+};
+
+window.addEventListener('unhandledrejection', function(event) {
+  var splash = document.getElementById('init-splash');
+  if (splash) splash.style.display = 'none';
+  if(typeof app !== 'undefined' && app.showAlert) {
+    app.showAlert("【通信エラー発生】\n" + (event.reason.message || event.reason));
+  } else {
+    alert("【通信エラー発生】\n" + (event.reason.message || event.reason));
+  }
+});
+  
+var app = {
+  role: null,
+  token: null,
+  products: [],
+  currentProduct: null,
+  editState: { existingImages: [], existingImageNames: [], newImagesBase64: [], newImageNames: [] },
+  alertCallback: null,
+  
+  currentTypeFilter: "all",
+  currentLengthFilter: "all",
+  displayLimit: 20,
+
+  showLoading: function(show, text) { 
+    document.getElementById('loading-text').innerText = text || "処理中...";
+    document.getElementById('loading').style.display = show ? 'flex' : 'none'; 
+  },
+  
+  showToast: function(message) {
+    var toast = document.getElementById('toast-container');
+    document.getElementById('toast-message').innerText = message;
+    toast.style.bottom = '30px'; 
+    setTimeout(function() { toast.style.bottom = '-100px'; }, 3000);
+  },
+
+  showAlert: function(message, callback) {
+    document.getElementById('custom-alert-message').innerText = message;
+    document.getElementById('custom-alert').style.display = 'flex';
+    app.alertCallback = callback;
+  },
+  closeAlert: function() {
+    document.getElementById('custom-alert').style.display = 'none';
+    if(app.alertCallback) { var cb = app.alertCallback; app.alertCallback = null; cb(); }
+  },
+
+  showView: function(viewId) {
+    var views = document.querySelectorAll('.view-section');
+    for (var i = 0; i < views.length; i++) { views[i].classList.remove('active'); }
+    document.getElementById(viewId).classList.add('active');
+    window.scrollTo(0, 0); 
+    
+    var splash = document.getElementById('init-splash');
+    if (splash) splash.style.display = 'none';
+  },
+
+  goHome: function() {
+    app.setupAdminUI(app.role === 'admin');
+    app.doSearch();
+  },
+  setRole: function(role) {
+    app.role = role;
+    var finalize = function() { app.doSearch(); }; 
+    if (role === 'admin') {
+      if(sessionStorage.getItem('adminToken')) {
+        app.token = sessionStorage.getItem('adminToken');
+        app.setupAdminUI(true);
+        finalize();
+      } else {
+        app.showLoading(false);
+        app.showView('view-login');
+      }
+    } else {
+      app.setupAdminUI(false);
+      finalize();
+    }
+  },
+  setupAdminUI: function(isAdmin) {
+    document.getElementById('admin-controls').style.display = isAdmin ? 'flex' : 'none'; 
+    document.getElementById('btn-logout').style.display = isAdmin ? 'block' : 'none';
+    var adminEls = document.querySelectorAll('.admin-only');
+    for (var i = 0; i < adminEls.length; i++) { adminEls[i].style.display = isAdmin ? 'inline-block' : 'none'; }
+  },
+  togglePassword: function() {
+    var passInput = document.getElementById('login-pass');
+    var icon = document.getElementById('toggle-password-icon');
+    if (passInput.type === "password") {
+      passInput.type = "text";
+      icon.classList.remove("bi-eye"); icon.classList.add("bi-eye-slash");
+    } else {
+      passInput.type = "password";
+      icon.classList.remove("bi-eye-slash"); icon.classList.add("bi-eye");
+    }
+  },
+
+  login: async function() {
+    var id = document.getElementById('login-id').value.trim();
+    var pass = document.getElementById('login-pass').value.trim();
+    if(!id || !pass) return app.showAlert('IDとパスワードを入力してください');
+    
+    app.showLoading(true, "ログイン中...");
+    try {
+      const res = await fetchGAS('login', { id: id, password: pass });
+      app.showLoading(false);
+      app.role = 'admin'; 
+      app.token = res.token;
+      sessionStorage.setItem('adminToken', res.token);
+      app.setupAdminUI(true);
+      app.doSearch();
+    } catch (err) {
+      app.showLoading(false);
+      app.showAlert(err.message);
+    }
+  },
+  logout: function() {
+    sessionStorage.removeItem('adminToken');
+    app.token = null; 
+    app.setRole('customer'); 
+  },
+
+  doSearch: function() {
+    app.displayLimit = 20;
+    app.loadProducts();
+  },
+  doSort: function() {
+    app.displayLimit = 20;
+    app.renderList();
+  },
+
+  loadProducts: async function() {
+    var splash = document.getElementById('init-splash');
+    if (!splash || splash.style.display === 'none') {
+      app.showLoading(true, "データを読み込み中...");
+    }
+    
+    try {
+      const query = document.getElementById('search-input').value;
+      const json = await fetchGAS('getProducts', { query: query });
+      
+      app.products = json.data;
+      app.renderTypeFilters();
+      app.renderList();
+      app.showLoading(false);
+      app.showView('view-list');
+    } catch (err) {
+      app.showLoading(false);
+      if (splash) splash.style.display = 'none';
+      app.showAlert("データの取得に失敗しました。\n詳細: " + err.message);
+    }
+  },
+  
+  extractLength: function(sizeStr) {
+    if (!sizeStr) return 0;
+    sizeStr = sizeStr.replace(/[０-９]/g, function(s) { return String.fromCharCode(s.charCodeAt(0) - 0xFEE0); });
+    var match = sizeStr.match(/長[さ]?\s*:?\s*(\d+)(?:\.\d+)?/);
+    if (match) return parseFloat(match[1]);
+    var nums = sizeStr.match(/\d+(?:\.\d+)?/g);
+    if (nums && nums.length > 0) return Math.max.apply(null, nums.map(function(n) { return parseFloat(n); }));
+    return 0;
+  },
+
+  extractCategory: function(name) {
+    if (!name || name === "-" || name === "名称未設定") return "";
+    var cat = name.replace(/[0-9０-９一二三四五六七八九十]+枚.*/, '');
+    cat = cat.split(/[\s　\(\)（）]/)[0];
+    return cat.trim();
+  },
+
+  renderTypeFilters: function() {
+    var container = document.getElementById('type-filters');
+    container.innerHTML = '';
+    var btnAll = document.createElement('button');
+    btnAll.className = 'btn filter-btn ' + (app.currentTypeFilter === 'all' ? 'active' : '');
+    btnAll.innerText = 'すべて';
+    btnAll.onclick = function() { app.filterByType('all', this); };
+    container.appendChild(btnAll);
+    
+    var types = new Set();
+    app.products.forEach(function(p) {
+      if (app.role === 'customer' && p.status === '非公開') return;
+      var cat = app.extractCategory(p.name);
+      if(cat) types.add(cat);
+    });
+    
+    var typeArray = Array.from(types).sort(function(a,b){ return a.localeCompare(b, 'ja'); });
+    typeArray.forEach(function(t) {
+      var btn = document.createElement('button');
+      btn.className = 'btn filter-btn ' + (app.currentTypeFilter === t ? 'active' : '');
+      btn.innerText = t;
+      btn.onclick = function() { app.filterByType(t, this); };
+      container.appendChild(btn);
+    });
+  },
+
+  filterByType: function(type, btnElem) {
+    app.currentTypeFilter = type;
+    app.displayLimit = 20; 
+    var btns = document.querySelectorAll('#type-filters .btn');
+    btns.forEach(function(b) { b.classList.remove('active'); });
+    btnElem.classList.add('active');
+    app.renderList();
+  },
+
+  filterByLength: function(filterType, btnElem) {
+    app.currentLengthFilter = filterType;
+    app.displayLimit = 20;
+    var btns = document.querySelectorAll('#length-filters .btn');
+    btns.forEach(function(b) { b.classList.remove('active'); });
+    btnElem.classList.add('active');
+    app.renderList();
+  },
+
+  getThumbnailUrl: function(fileId) {
+    if(!fileId) return 'https://via.placeholder.com/300x200?text=No+Image';
+    return 'http://lh3.googleusercontent.com/d/' + fileId;
+  },
+
+  toggleFavorite: async function(pinban, event) {
+    if(event) event.stopPropagation(); 
+    
+    var myFavs = JSON.parse(localStorage.getItem('myFavs') || '[]');
+    var isAdding = !myFavs.includes(pinban); 
+    
+    if (isAdding) myFavs.push(pinban);
+    else myFavs = myFavs.filter(function(id) { return id !== pinban; });
+    
+    localStorage.setItem('myFavs', JSON.stringify(myFavs)); 
+    
+    var p = app.products.find(function(prod) { return prod.pinban === pinban; });
+    if (p) {
+      p.favoriteCount = (p.favoriteCount || 0) + (isAdding ? 1 : -1);
+      if (p.favoriteCount < 0) p.favoriteCount = 0;
+    }
+    
+    app.renderList();
+    if (app.currentProduct && app.currentProduct.pinban === pinban) {
+      var icon = document.getElementById('detail-fav-icon');
+      var countSpan = document.getElementById('detail-fav-count');
+      if(isAdding) {
+        icon.className = "bi bi-heart-fill text-danger";
+        countSpan.className = "ms-1 text-danger";
+      } else {
+        icon.className = "bi bi-heart";
+        countSpan.className = "ms-1 text-dark";
+      }
+      countSpan.innerText = p.favoriteCount;
+    }
+    
+    try {
+      await fetchGAS('updateFavorite', { pinban: pinban, changeAmount: isAdding ? 1 : -1 });
+    } catch(e) {
+      console.error("お気に入り更新エラー", e);
+    }
+  },
+
+  renderList: function() {
+    var container = document.getElementById('product-list-container');
+    container.innerHTML = '';
+    
+    var filteredProducts = app.products.filter(function(p) {
+       if (app.role === 'customer' && p.status === '非公開') return false;
+
+       var len = app.extractLength(p.size);
+       var matchLength = true;
+       if (app.currentLengthFilter === 'under1') matchLength = (len > 0 && len < 1000);
+       else if (app.currentLengthFilter === '1to3') matchLength = (len >= 1000 && len < 3000);
+       else if (app.currentLengthFilter === '3to5') matchLength = (len >= 3000 && len < 5000);
+       else if (app.currentLengthFilter === 'over5') matchLength = (len >= 5000);
+
+       var matchType = true;
+       if (app.currentTypeFilter !== 'all') matchType = p.name.includes(app.currentTypeFilter);
+       return matchLength && matchType;
+    });
+
+    var sortType = document.getElementById('sort-select').value;
+    if (sortType === 'asc') {
+      filteredProducts.sort(function(a, b) { return String(a.name).localeCompare(String(b.name), 'ja'); });
+    } else if (sortType === 'desc') {
+      filteredProducts.sort(function(a, b) { return String(b.name).localeCompare(String(a.name), 'ja'); });
+    } else {
+      filteredProducts.sort(function(a, b) { return b.rowIdx - a.rowIdx; });
+    }
+
+    if(filteredProducts.length === 0) {
+      container.innerHTML = '<p class="text-center text-muted" style="font-size:1.2rem; margin-top:2rem;">該当する商品が見つかりません。</p>';
+      return;
+    }
+
+    var displayProducts = filteredProducts.slice(0, app.displayLimit);
+    var myFavs = JSON.parse(localStorage.getItem('myFavs') || '[]');
+
+    displayProducts.forEach(function(p) {
+      var firstImageId = p.imageIds.length > 0 ? p.imageIds[0] : null;
+      var col = document.createElement('div');
+      col.className = 'col-6 col-md-4 col-lg-3 mb-4';
+      var html = '<div class="card h-10
