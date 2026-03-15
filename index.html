@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>管理システム</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <style>
-    body { background-color: #f8f9fa; }
+    body { background-color: #f8f9fa; overflow-x: hidden; }
     .view-section { display: none; }
     .view-section.active { display: block; }
     .thumbnail-img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; }
@@ -36,15 +37,20 @@
     .filter-btn.active { background: linear-gradient(135deg, #4dabf7, #1971c2) !important; color: white !important; border: none !important; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2) !important; }
     .filter-btn-group { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
     .quick-edit-btn:hover { background-color: #e9ecef !important; transform: scale(1.1) !important; }
-    .fav-btn { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .fav-btn { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; justify-content: center; }
     .fav-btn:active { transform: scale(0.8); }
+    
+    /* スマホ向けの詳細なサイズ調整 */
     @media (max-width: 768px) {
+      .thumbnail-img { height: 160px; }
       .search-input-huge { padding: 1rem !important; font-size: 1rem !important; border-radius: 8px 0 0 8px !important; }
-      .btn-search-huge { padding: 1rem 1.5rem !important; font-size: 1.1rem !important; border-radius: 0 8px 8px 0 !important; }
+      .btn-search-huge { padding: 1rem 1.2rem !important; font-size: 1rem !important; border-radius: 0 8px 8px 0 !important; }
       .btn-admin-huge { padding: 1rem 0 !important; font-size: 1.1rem !important; border-radius: 8px !important; }
       .form-control-huge { padding: 1rem !important; font-size: 1.2rem !important; }
       .btn-login-huge { padding: 1.8rem 1rem !important; font-size: 1.6rem !important; }
       .filter-btn { font-size: 0.85rem !important; padding: 0.3rem 0.8rem !important; }
+      .card-body { padding: 0.8rem !important; }
+      .card-title { font-size: 1rem !important; }
     }
   </style>
 </head>
@@ -78,7 +84,7 @@
   </div>
 </nav>
 
-<div class="container mt-4 mb-5">
+<div class="container mt-3 mb-5">
 
   <div id="view-login" class="view-section">
     <div class="row justify-content-center">
@@ -95,7 +101,7 @@
               <div class="input-group">
                 <input type="password" id="login-pass" class="form-control form-control-huge">
                 <button class="btn btn-secondary" type="button" onclick="app.togglePassword()" style="border-radius: 0 8px 8px 0 !important; padding: 0 1.5rem;">
-                  <i class="bi bi-eye" id="toggle-password-icon" style="font-size: 1.8rem;"></i>
+                  <i class="bi bi-eye" id="toggle-password-icon" style="font-size: 1.5rem;"></i>
                 </button>
               </div>
             </div>
@@ -110,20 +116,21 @@
   </div>
 
   <div id="view-list" class="view-section">
-    <div class="d-flex flex-column mb-3 gap-3">
+    <div class="d-flex flex-column mb-3 gap-2">
       <div class="d-flex gap-2">
         <div class="input-group flex-grow-1">
-          <input type="text" id="search-input" class="form-control search-input-huge" placeholder="商品名、サイズ、備考で検索" onkeyup="if(event.key==='Enter') app.doSearch();">
+          <input type="text" id="search-input" class="form-control search-input-huge" placeholder="商品名やサイズで検索" onkeyup="if(event.key==='Enter') app.doSearch();">
           <button class="btn btn-secondary btn-search-huge" onclick="app.doSearch()">検索</button>
         </div>
-        <select id="sort-select" class="form-select form-select-lg" style="width: auto; border-radius: 12px; font-weight: bold; color: #495057; border: 2px solid #ced4da;" onchange="app.doSort()">
+        <select id="sort-select" class="form-select" style="width: auto; border-radius: 12px; font-weight: bold; color: #495057; border: 2px solid #ced4da;" onchange="app.doSort()">
           <option value="new">新着順</option>
+          <option value="fav">お気に入り数: 降順</option>
           <option value="asc">名称: 昇順</option>
           <option value="desc">名称: 降順</option>
         </select>
       </div>
       <div>
-        <div class="filter-section-title">品目</div>
+        <div class="filter-section-title mt-2">品目</div>
         <div class="filter-btn-group" id="type-filters"></div>
       </div>
       <div>
@@ -143,16 +150,16 @@
         </button>
       </div>
     </div>
-    <div class="row" id="product-list-container"></div>
+    <div class="row g-2 g-md-3" id="product-list-container"></div>
   </div>
 
   <div id="view-detail" class="view-section">
     <div class="d-flex gap-2 mb-3">
-      <button class="btn btn-secondary" style="padding: 1rem 1.5rem; font-weight: bold;" onclick="app.showView('view-list')">← 一覧に戻る</button>
-      <button class="btn btn-primary admin-only flex-grow-1" style="display:none; padding: 1rem 1.5rem; font-weight: bold;" onclick="app.editCurrent()">この商品を編集</button>
+      <button class="btn btn-secondary" style="padding: 0.8rem 1.2rem; font-weight: bold;" onclick="app.showView('view-list')">← 一覧に戻る</button>
+      <button class="btn btn-primary admin-only flex-grow-1" style="display:none; padding: 0.8rem 1.2rem; font-weight: bold;" onclick="app.editCurrent()">この商品を編集</button>
     </div>
     <div class="card shadow-sm" style="border-radius: 15px; border: none;">
-      <div class="card-body p-4">
+      <div class="card-body p-3 p-md-4">
         <div class="row">
           <div class="col-md-6">
             <div id="productCarousel" class="carousel slide" data-bs-ride="carousel">
@@ -167,30 +174,34 @@
               </button>
             </div>
           </div>
-          <div class="col-md-6 mt-4 mt-md-0 position-relative">
+          <div class="col-md-6 mt-3 mt-md-0 position-relative">
             <div id="detail-status-area" class="mb-2"></div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h2 id="detail-name" style="font-weight: bold; margin:0;">商品名</h2>
-              <button id="detail-fav-btn" class="btn btn-light rounded-pill shadow-sm fs-4 px-3 fav-btn" onclick="app.toggleFavorite(app.currentProduct.pinban, event)">
-                <i class="bi bi-heart" id="detail-fav-icon"></i> <span id="detail-fav-count" class="ms-1" style="font-weight:bold;">0</span>
+            <div class="d-flex justify-content-between align-items-start mb-3 flex-column flex-md-row gap-2">
+              <h2 id="detail-name" style="font-weight: bold; margin:0; font-size: 1.6rem;">商品名</h2>
+              
+              <button id="detail-fav-btn" class="btn btn-light rounded-pill shadow-sm px-3 py-2 fav-btn" onclick="app.toggleFavorite(app.currentProduct.pinban, event)">
+                <i class="bi bi-heart fs-5" id="detail-fav-icon"></i> 
+                <span class="ms-2 fw-bold text-secondary" id="detail-fav-label" style="font-size: 0.9rem;">お気に入り</span>
+                <span id="detail-fav-count" class="ms-2 fw-bold fs-5 text-secondary">0</span>
               </button>
+              
             </div>
-            <p class="text-muted">品番: <span id="detail-pinban"></span></p>
-            <table class="table mt-3">
+            <p class="text-muted small">品番: <span id="detail-pinban"></span></p>
+            <table class="table table-sm mt-3" style="font-size: 0.9rem;">
               <tbody>
                 <tr><th style="width: 30%;">サイズ</th><td id="detail-size"></td></tr>
                 <tr><th>ポイント</th><td id="detail-point"></td></tr>
-                <tr><th>備考</th><td id="detail-remarks"></td></tr>
+                <tr><th>備考</th><td id="detail-remarks" style="white-space: pre-wrap;"></td></tr>
                 <tr><th>更新者</th><td id="detail-account"></td></tr>
               </tbody>
             </table>
-            <button class="btn w-100 mt-3 mb-4 text-white" style="border-radius:15px; font-weight:bold; font-size:1.2rem; background: linear-gradient(135deg, #f59f00, #f08c00); box-shadow: 0 4px 10px rgba(240, 140, 0, 0.3);" onclick="app.sendInquiry()">
+            <button class="btn w-100 mt-2 mb-4 text-white" style="border-radius:15px; font-weight:bold; font-size:1.1rem; padding: 1rem; background: linear-gradient(135deg, #f59f00, #f08c00); box-shadow: 0 4px 10px rgba(240, 140, 0, 0.3);" onclick="app.sendInquiry()">
               <i class="bi bi-envelope-paper-heart me-2"></i>この商品について問い合わせる
             </button>
             
             <div class="text-center mt-2">
-              <h6 style="font-weight: bold; color: #555;">【商品QRコード】</h6>
-              <div id="qrcode-display" class="d-inline-block p-3 bg-white border" style="border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"></div>
+              <h6 style="font-weight: bold; color: #555; font-size: 0.9rem;">【商品QRコード】</h6>
+              <div id="qrcode-display" class="d-inline-block p-2 bg-white border" style="border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"></div>
             </div>
           </div>
         </div>
@@ -201,36 +212,36 @@
   <div id="view-edit" class="view-section">
     <h3 id="edit-title" class="mb-4" style="font-weight: bold;">商品登録</h3>
     <div class="card shadow-sm" style="border-radius: 15px; border: none;">
-      <div class="card-body p-4">
+      <div class="card-body p-3 p-md-4">
         <input type="hidden" id="edit-pinban">
         <div class="mb-4 p-3 border rounded bg-light">
           <label class="form-label font-weight-bold mb-2">販売状況 (ステータス)</label>
           <div class="d-flex gap-2 flex-wrap">
             <input type="radio" class="btn-check" name="edit-status" id="status-sale" value="販売中" autocomplete="off" checked>
-            <label class="btn btn-outline-primary" for="status-sale"><i class="bi bi-shop me-1"></i>販売中</label>
+            <label class="btn btn-outline-primary btn-sm" for="status-sale"><i class="bi bi-shop me-1"></i>販売中</label>
             <input type="radio" class="btn-check" name="edit-status" id="status-nego" value="商談中" autocomplete="off">
-            <label class="btn btn-outline-success" for="status-nego"><i class="bi bi-chat-dots me-1"></i>商談中</label>
+            <label class="btn btn-outline-success btn-sm" for="status-nego"><i class="bi bi-chat-dots me-1"></i>商談中</label>
             <input type="radio" class="btn-check" name="edit-status" id="status-sold" value="Sold Out" autocomplete="off">
-            <label class="btn btn-outline-danger" for="status-sold"><i class="bi bi-x-circle me-1"></i>Sold Out</label>
+            <label class="btn btn-outline-danger btn-sm" for="status-sold"><i class="bi bi-x-circle me-1"></i>Sold Out</label>
             <input type="radio" class="btn-check" name="edit-status" id="status-archive" value="非公開" autocomplete="off">
-            <label class="btn btn-outline-secondary" for="status-archive"><i class="bi bi-eye-slash me-1"></i>非公開 (アーカイブ)</label>
+            <label class="btn btn-outline-secondary btn-sm" for="status-archive"><i class="bi bi-eye-slash me-1"></i>非公開 (アーカイブ)</label>
           </div>
         </div>
         <div class="mb-3">
           <label class="form-label font-weight-bold">商品名</label>
-          <input type="text" id="edit-name" class="form-control form-control-lg" placeholder="未入力でも保存できます">
+          <input type="text" id="edit-name" class="form-control" placeholder="未入力でも保存できます">
         </div>
         <div class="mb-3">
           <label class="form-label font-weight-bold">サイズ</label>
-          <input type="text" id="edit-size" class="form-control form-control-lg" placeholder="例: 長さ4060mm×幅430mm×厚み73mm">
+          <input type="text" id="edit-size" class="form-control" placeholder="例: 長さ4060mm×幅430mm×厚み73mm">
         </div>
         <div class="mb-3">
           <label class="form-label font-weight-bold">ポイント</label>
-          <input type="text" id="edit-point" class="form-control form-control-lg">
+          <input type="text" id="edit-point" class="form-control">
         </div>
         <div class="mb-3">
           <label class="form-label font-weight-bold">備考</label>
-          <textarea id="edit-remarks" class="form-control form-control-lg" rows="3"></textarea>
+          <textarea id="edit-remarks" class="form-control" rows="4"></textarea>
         </div>
         <div class="mb-4">
           <label class="form-label font-weight-bold">写真の追加と名称編集 (複数可)</label>
@@ -244,39 +255,37 @@
           </div>
           <input type="file" id="input-camera" accept="image/*" capture="environment" style="display:none;">
           <input type="file" id="input-file" accept="image/*" multiple style="display:none;">
-          <small class="text-muted d-block mb-2">※大容量ファイルは自動的にリサイズされます。</small>
-          <div id="image-preview-area" class="border p-3 rounded bg-light" style="min-height:120px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);"></div>
+          <small class="text-muted d-block mb-2" style="font-size: 0.8rem;">※大容量ファイルは自動的にリサイズされます。</small>
+          <div id="image-preview-area" class="border p-2 rounded bg-light d-flex flex-wrap" style="min-height:120px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);"></div>
         </div>
-        <div class="d-grid gap-3 mt-5">
-          <button class="btn btn-success" style="padding: 1.5rem; font-size: 1.5rem; font-weight: bold;" onclick="app.saveProduct()">保存して反映する</button>
-          <button class="btn btn-secondary" style="padding: 1.2rem; font-size: 1.2rem; font-weight: bold;" onclick="app.showView('view-list')">キャンセルして戻る</button>
+        <div class="d-grid gap-3 mt-4">
+          <button class="btn btn-success" style="padding: 1.2rem; font-size: 1.2rem; font-weight: bold;" onclick="app.saveProduct()">保存して反映する</button>
+          <button class="btn btn-secondary" style="padding: 1rem; font-weight: bold;" onclick="app.showView('view-list')">キャンセルして戻る</button>
         </div>
       </div>
     </div>
   </div>
 
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 // ====================================================================
-// ★ 完璧に発行された新しいGASのURLで、直接通信を行います！
+// ★ Vercelフロントエンド 最終完全版スクリプト (スマホ最適化・お気に入り機能強化)
 // ====================================================================
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxb-m_hhjjtaEV8itaUsUiqOMjSmv_gxpipqOtihIvw-gsASVgME23a1pLkxIKKyE4R/exec";
 const SHOP_EMAIL = "shop@example.com"; 
 
-// ★ ブラウザからGASへ直接、CORSを公式に通過する「text/plain」で通信
 async function fetchGAS(action, payload = {}) {
   const options = {
     method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    redirect: 'follow',
     body: JSON.stringify({ action: action, ...payload })
   };
-  
   const response = await fetch(GAS_API_URL, options);
-  const text = await response.text();
-  
+  const text = await response.text(); 
   try {
     const data = JSON.parse(text);
     if (!data.success) throw new Error(data.message || "処理に失敗しました");
@@ -286,7 +295,6 @@ async function fetchGAS(action, payload = {}) {
   }
 }
 
-// 目に見えないエラーを強制的に画面に出す「自己診断機能」
 window.onerror = function(msg, url, line, col, error) {
   var splash = document.getElementById('init-splash');
   if (splash) splash.style.display = 'none';
@@ -346,7 +354,6 @@ var app = {
     for (var i = 0; i < views.length; i++) { views[i].classList.remove('active'); }
     document.getElementById(viewId).classList.add('active');
     window.scrollTo(0, 0); 
-    
     var splash = document.getElementById('init-splash');
     if (splash) splash.style.display = 'none';
   },
@@ -532,13 +539,16 @@ var app = {
     app.renderList();
     if (app.currentProduct && app.currentProduct.pinban === pinban) {
       var icon = document.getElementById('detail-fav-icon');
+      var labelSpan = document.getElementById('detail-fav-label');
       var countSpan = document.getElementById('detail-fav-count');
       if(isAdding) {
-        icon.className = "bi bi-heart-fill text-danger";
-        countSpan.className = "ms-1 text-danger";
+        icon.className = "bi bi-heart-fill fs-5 text-danger";
+        if(labelSpan) labelSpan.className = "ms-2 fw-bold text-danger";
+        countSpan.className = "ms-2 fw-bold fs-5 text-danger";
       } else {
-        icon.className = "bi bi-heart";
-        countSpan.className = "ms-1 text-dark";
+        icon.className = "bi bi-heart fs-5";
+        if(labelSpan) labelSpan.className = "ms-2 fw-bold text-secondary";
+        countSpan.className = "ms-2 fw-bold fs-5 text-secondary";
       }
       countSpan.innerText = p.favoriteCount;
     }
@@ -574,12 +584,14 @@ var app = {
       filteredProducts.sort(function(a, b) { return String(a.name).localeCompare(String(b.name), 'ja'); });
     } else if (sortType === 'desc') {
       filteredProducts.sort(function(a, b) { return String(b.name).localeCompare(String(a.name), 'ja'); });
+    } else if (sortType === 'fav') { // ★追加：お気に入り数による降順ソート
+      filteredProducts.sort(function(a, b) { return (b.favoriteCount || 0) - (a.favoriteCount || 0); });
     } else {
       filteredProducts.sort(function(a, b) { return b.rowIdx - a.rowIdx; });
     }
 
     if(filteredProducts.length === 0) {
-      container.innerHTML = '<p class="text-center text-muted" style="font-size:1.2rem; margin-top:2rem;">該当する商品が見つかりません。</p>';
+      container.innerHTML = '<p class="text-center text-muted" style="font-size:1.1rem; margin-top:2rem;">該当する商品が見つかりません。</p>';
       return;
     }
 
@@ -589,31 +601,33 @@ var app = {
     displayProducts.forEach(function(p) {
       var firstImageId = p.imageIds.length > 0 ? p.imageIds[0] : null;
       var col = document.createElement('div');
-      col.className = 'col-6 col-md-4 col-lg-3 mb-4';
-      var html = '<div class="card h-100 shadow-sm position-relative" style="cursor:pointer; border-radius:12px; border:none; transition: transform 0.2s;" onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'" onclick="app.showDetail(\'' + p.pinban + '\')">';
+      // ★ スマホでは横幅いっぱいの2列配置になるよう最適化
+      col.className = 'col-6 col-md-4 col-lg-3';
+      var html = '<div class="card h-100 shadow-sm position-relative" style="cursor:pointer; border-radius:12px; border:none; transition: transform 0.2s;" onclick="app.showDetail(\'' + p.pinban + '\')">';
       
       if (p.status === "Sold Out") html += '<div class="status-badge bg-danger">Sold Out</div>';
       else if (p.status === "商談中") html += '<div class="status-badge bg-success">商談中</div>';
       else if (p.status === "非公開") html += '<div class="status-badge bg-secondary">非公開</div>';
 
       if (app.role === 'admin') {
-        html += '<button class="btn btn-light btn-sm position-absolute quick-edit-btn" style="top: 8px; right: 8px; z-index: 10; border-radius: 50%; width: 40px; height: 40px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center; transition: all 0.2s;" onclick="event.stopPropagation(); app.openEdit(\'' + p.pinban + '\');" title="編集する"><i class="bi bi-pencil-fill text-primary" style="font-size: 1.2rem;"></i></button>';
+        html += '<button class="btn btn-light btn-sm position-absolute quick-edit-btn" style="top: 8px; right: 8px; z-index: 10; border-radius: 50%; width: 36px; height: 36px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); display: flex; justify-content: center; align-items: center;" onclick="event.stopPropagation(); app.openEdit(\'' + p.pinban + '\');" title="編集する"><i class="bi bi-pencil-fill text-primary"></i></button>';
       }
 
       html += '<img src="' + app.getThumbnailUrl(firstImageId) + '" class="card-img-top thumbnail-img" style="border-radius:12px 12px 0 0;">';
       
-      html += '<div class="card-body p-3 d-flex flex-column justify-content-between">';
+      html += '<div class="card-body p-2 p-md-3 d-flex flex-column justify-content-between">';
       html += '<div>';
       var displayName = p.name ? p.name : "-";
-      html += '<h6 class="card-title text-truncate mb-2" style="font-weight:bold; font-size:1.1rem;">' + displayName + '</h6>';
-      html += '<p class="card-text small text-muted mb-1">品番: ' + p.pinban + '</p>';
-      html += '<p class="card-text small text-muted mb-0">サイズ: ' + (p.size ? p.size : '-') + '</p>';
+      html += '<h6 class="card-title text-truncate mb-1" style="font-weight:bold; font-size:1rem;">' + displayName + '</h6>';
+      html += '<p class="card-text text-muted mb-0" style="font-size:0.75rem;">品番: ' + p.pinban + '</p>';
+      html += '<p class="card-text text-muted mb-0 text-truncate" style="font-size:0.75rem;">サイズ: ' + (p.size ? p.size : '-') + '</p>';
       html += '</div>';
 
       var isFav = myFavs.includes(p.pinban);
       var heartIcon = isFav ? '<i class="bi bi-heart-fill text-danger"></i>' : '<i class="bi bi-heart text-secondary"></i>';
       var countColor = isFav ? 'text-danger' : 'text-secondary';
-      html += '<div class="text-end mt-2"><button class="btn btn-sm btn-light rounded-pill shadow-sm fav-btn" onclick="app.toggleFavorite(\'' + p.pinban + '\', event)">' + heartIcon + ' <span class="' + countColor + ' fw-bold">' + (p.favoriteCount || 0) + '</span></button></div>';
+      // ★修正：一覧のボタンにも「お気に入り」という文字を追加
+      html += '<div class="mt-2 d-flex justify-content-end"><button class="btn btn-sm btn-light rounded-pill shadow-sm fav-btn d-flex align-items-center py-1 px-2" onclick="app.toggleFavorite(\'' + p.pinban + '\', event)">' + heartIcon + '<span class="ms-1 ' + countColor + '" style="font-size:0.7rem; font-weight:600;">お気に入り</span><span class="ms-1 ' + countColor + ' fw-bold" style="font-size:0.85rem;">' + (p.favoriteCount || 0) + '</span></button></div>';
 
       html += '</div></div>';
       col.innerHTML = html;
@@ -622,8 +636,8 @@ var app = {
 
     if (filteredProducts.length > app.displayLimit) {
       var moreBtn = document.createElement('div');
-      moreBtn.className = 'col-12 text-center mt-3 mb-5';
-      moreBtn.innerHTML = '<button class="btn btn-outline-primary" style="padding: 0.8rem 3rem; border-radius: 30px; font-weight: bold;" onclick="app.displayLimit += 20; app.renderList();"><i class="bi bi-chevron-down me-2"></i>さらに読み込む</button>';
+      moreBtn.className = 'col-12 text-center mt-3 mb-4';
+      moreBtn.innerHTML = '<button class="btn btn-outline-primary" style="padding: 0.6rem 2rem; border-radius: 30px; font-weight: bold;" onclick="app.displayLimit += 20; app.renderList();"><i class="bi bi-chevron-down me-2"></i>さらに読み込む</button>';
       container.appendChild(moreBtn);
     }
   },
@@ -636,10 +650,10 @@ var app = {
 
     var statusArea = document.getElementById('detail-status-area');
     statusArea.innerHTML = '';
-    if (p.status === "Sold Out") statusArea.innerHTML = '<span class="badge bg-danger fs-6 p-2">Sold Out</span>';
-    else if (p.status === "商談中") statusArea.innerHTML = '<span class="badge bg-success fs-6 p-2">商談中</span>';
-    else if (p.status === "非公開") statusArea.innerHTML = '<span class="badge bg-secondary fs-6 p-2">非公開</span>';
-    else statusArea.innerHTML = '<span class="badge bg-primary fs-6 p-2">販売中</span>';
+    if (p.status === "Sold Out") statusArea.innerHTML = '<span class="badge bg-danger p-2">Sold Out</span>';
+    else if (p.status === "商談中") statusArea.innerHTML = '<span class="badge bg-success p-2">商談中</span>';
+    else if (p.status === "非公開") statusArea.innerHTML = '<span class="badge bg-secondary p-2">非公開</span>';
+    else statusArea.innerHTML = '<span class="badge bg-primary p-2">販売中</span>';
 
     document.getElementById('detail-name').innerText = p.name ? p.name : "-";
     document.getElementById('detail-pinban').innerText = p.pinban;
@@ -651,28 +665,32 @@ var app = {
     var myFavs = JSON.parse(localStorage.getItem('myFavs') || '[]');
     var isFav = myFavs.includes(p.pinban);
     var icon = document.getElementById('detail-fav-icon');
+    var labelSpan = document.getElementById('detail-fav-label');
     var countSpan = document.getElementById('detail-fav-count');
+    
     if(isFav) {
-      icon.className = "bi bi-heart-fill text-danger";
-      countSpan.className = "ms-1 text-danger";
+      icon.className = "bi bi-heart-fill fs-5 text-danger";
+      if(labelSpan) labelSpan.className = "ms-2 fw-bold text-danger";
+      countSpan.className = "ms-2 fw-bold fs-5 text-danger";
     } else {
-      icon.className = "bi bi-heart";
-      countSpan.className = "ms-1 text-dark";
+      icon.className = "bi bi-heart fs-5";
+      if(labelSpan) labelSpan.className = "ms-2 fw-bold text-secondary";
+      countSpan.className = "ms-2 fw-bold fs-5 text-secondary";
     }
     countSpan.innerText = p.favoriteCount || 0;
 
     var carouselInner = document.getElementById('carousel-inner-container');
     carouselInner.innerHTML = '';
     if(p.imageIds.length === 0) {
-      carouselInner.innerHTML = '<div class="carousel-item active"><img src="https://via.placeholder.com/600x400?text=No+Image" class="d-block w-100" style="height:350px; object-fit:cover; border-radius:12px;"></div>';
+      carouselInner.innerHTML = '<div class="carousel-item active"><img src="https://via.placeholder.com/600x400?text=No+Image" class="d-block w-100" style="height:300px; object-fit:cover; border-radius:12px;"></div>';
     } else {
       p.imageIds.forEach(function(id, index) {
         var actCls = index === 0 ? 'active' : '';
         var imgName = (p.imageNames && p.imageNames[index]) ? p.imageNames[index] : '';
         var html = '<div class="carousel-item ' + actCls + ' position-relative">';
-        html += '<img src="' + app.getThumbnailUrl(id) + '" class="d-block w-100" style="height:350px; object-fit:cover; border-radius:12px;">';
+        html += '<img src="' + app.getThumbnailUrl(id) + '" class="d-block w-100" style="height:300px; object-fit:cover; border-radius:12px;">';
         if (imgName) {
-           html += '<div class="position-absolute bottom-0 w-100 p-2 text-center text-white" style="background:linear-gradient(transparent, rgba(0,0,0,0.8)); border-radius: 0 0 12px 12px;"><h5 class="m-0">' + imgName + '</h5></div>';
+           html += '<div class="position-absolute bottom-0 w-100 p-2 text-center text-white" style="background:linear-gradient(transparent, rgba(0,0,0,0.8)); border-radius: 0 0 12px 12px;"><h6 class="m-0" style="font-size:0.9rem;">' + imgName + '</h6></div>';
         }
         html += '</div>';
         carouselInner.innerHTML += html;
@@ -682,7 +700,7 @@ var app = {
     var currentUrl = window.location.origin + window.location.pathname;
     var qrData = currentUrl + "?pinban=" + encodeURIComponent(p.pinban); 
     var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=" + encodeURIComponent(qrData);
-    document.getElementById('qrcode-display').innerHTML = '<img src="' + qrUrl + '" alt="QRコード">';
+    document.getElementById('qrcode-display').innerHTML = '<img src="' + qrUrl + '" alt="QRコード" style="width: 120px; height: 120px;">';
     
     app.showView('view-detail');
   },
@@ -908,5 +926,3 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-
-
