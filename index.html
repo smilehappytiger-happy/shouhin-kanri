@@ -229,7 +229,7 @@
         <div class="mb-3">
           <label class="form-label font-weight-bold">品番 (ID) <span class="badge bg-danger ms-1">重要</span></label>
           <input type="text" id="edit-pinban-input" class="form-control" placeholder="新規登録時は「英字」を入力すると自動で連番が付きます（例: WOOD）">
-          </div>
+        </div>
 
         <div class="mb-3">
           <label class="form-label font-weight-bold">商品名</label>
@@ -272,11 +272,12 @@
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 // ====================================================================
-// ★ Vercelフロントエンド 最終完全版スクリプト (重複エラー表示のバグ修正版)
+// ★ Vercelフロントエンド 最終完全版スクリプト (バグ修正＆ポップアップエラー版)
 // ====================================================================
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxb-m_hhjjtaEV8itaUsUiqOMjSmv_gxpipqOtihIvw-gsASVgME23a1pLkxIKKyE4R/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwuOZBthzD2iNfc3hA1BuymgkcIXRaxZYuBcOAjYNu5ux9chCwIUA8rGtBOIkdnxmiMeA/exec";
 const SHOP_EMAIL = "shop@example.com"; 
 
 async function fetchGAS(action, payload = {}) {
@@ -803,7 +804,7 @@ var app = {
     app.renderEditImagePreview(); 
   },
 
-  // ★ 修正：重複エラー発生時にパニックを起こさない安全な処理
+  // ★ 修正：一切のDOMエラーを出さず、安全に警告ポップアップを出す！
   saveProduct: async function() {
     let originalPinban = document.getElementById('edit-original-pinban').value;
     let inputPinban = document.getElementById('edit-pinban-input').value.trim();
@@ -848,7 +849,7 @@ var app = {
       app.doSearch(); 
     } catch(err) {
       app.showLoading(false);
-      // ★ 修正：画面中央のポップアップアラートで美しくエラーを出す！
+      // ★ 赤文字DOMを触るコードを完全撤去。アラートのみにする！
       if (err.message.includes("DUPLICATE_PINBAN")) {
         window.scrollTo(0, 0); 
         app.showAlert("【エラー】\n既存の品番と重複しています！\n別の品番に変更して再度保存してください。");
