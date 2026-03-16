@@ -40,7 +40,6 @@
     .fav-btn { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; justify-content: center; }
     .fav-btn:active { transform: scale(0.8); }
     
-    /* スマホ向けの詳細なサイズ調整 */
     @media (max-width: 768px) {
       .thumbnail-img { height: 160px; }
       .search-input-huge { padding: 1rem !important; font-size: 1rem !important; border-radius: 8px 0 0 8px !important; }
@@ -178,13 +177,11 @@
             <div id="detail-status-area" class="mb-2"></div>
             <div class="d-flex justify-content-between align-items-start mb-3 flex-column flex-md-row gap-2">
               <h2 id="detail-name" style="font-weight: bold; margin:0; font-size: 1.6rem;">商品名</h2>
-              
               <button id="detail-fav-btn" class="btn btn-light rounded-pill shadow-sm px-3 py-2 fav-btn" onclick="app.toggleFavorite(app.currentProduct.pinban, event)">
                 <i class="bi bi-heart fs-5" id="detail-fav-icon"></i> 
                 <span class="ms-2 fw-bold text-secondary" id="detail-fav-label" style="font-size: 0.9rem;">お気に入り</span>
                 <span id="detail-fav-count" class="ms-2 fw-bold fs-5 text-secondary">0</span>
               </button>
-              
             </div>
             <p class="text-muted small">品番: <span id="detail-pinban"></span></p>
             <table class="table table-sm mt-3" style="font-size: 0.9rem;">
@@ -198,7 +195,6 @@
             <button class="btn w-100 mt-2 mb-4 text-white" style="border-radius:15px; font-weight:bold; font-size:1.1rem; padding: 1rem; background: linear-gradient(135deg, #f59f00, #f08c00); box-shadow: 0 4px 10px rgba(240, 140, 0, 0.3);" onclick="app.sendInquiry()">
               <i class="bi bi-envelope-paper-heart me-2"></i>この商品について問い合わせる
             </button>
-            
             <div class="text-center mt-2">
               <h6 style="font-weight: bold; color: #555; font-size: 0.9rem;">【商品QRコード】</h6>
               <div id="qrcode-display" class="d-inline-block p-2 bg-white border" style="border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05);"></div>
@@ -213,7 +209,9 @@
     <h3 id="edit-title" class="mb-4" style="font-weight: bold;">商品登録</h3>
     <div class="card shadow-sm" style="border-radius: 15px; border: none;">
       <div class="card-body p-3 p-md-4">
-        <input type="hidden" id="edit-pinban">
+        
+        <input type="hidden" id="edit-original-pinban">
+        
         <div class="mb-4 p-3 border rounded bg-light">
           <label class="form-label font-weight-bold mb-2">販売状況 (ステータス)</label>
           <div class="d-flex gap-2 flex-wrap">
@@ -227,6 +225,16 @@
             <label class="btn btn-outline-secondary btn-sm" for="status-archive"><i class="bi bi-eye-slash me-1"></i>非公開 (アーカイブ)</label>
           </div>
         </div>
+        
+        <div class="mb-3">
+          <label class="form-label font-weight-bold">品番 (ID) <span class="badge bg-danger ms-1">重要</span></label>
+          <input type="text" id="edit-pinban-input" class="form-control" placeholder="新規登録時は「英字」を入力すると自動で連番が付きます（例: WOOD）">
+          <div id="edit-pinban-error" class="text-danger mt-1" style="display:none; font-weight:bold; font-size: 0.85rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>その品番は既に使用されています。別の品番を指定してください。
+          </div>
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">※既存の品番を変更すると、お客様のお気に入り登録がリセットされる場合があります。</small>
+        </div>
+
         <div class="mb-3">
           <label class="form-label font-weight-bold">商品名</label>
           <input type="text" id="edit-name" class="form-control" placeholder="未入力でも保存できます">
@@ -269,12 +277,11 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
 // ====================================================================
 // ★ Vercelフロントエンド 最終完全版スクリプト (スマホ最適化・お気に入り機能強化)
 // ====================================================================
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxb-m_hhjjtaEV8itaUsUiqOMjSmv_gxpipqOtihIvw-gsASVgME23a1pLkxIKKyE4R/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwZ9kgOMzOKLyHl-LQYR8dDmIp-JBgB0BSiNjqZt-k-dnDDFEYWCXY_HmvhUoimJczU_g/exec";
 const SHOP_EMAIL = "shop@example.com"; 
 
 async function fetchGAS(action, payload = {}) {
@@ -719,10 +726,14 @@ var app = {
     document.body.removeChild(a);
   },
 
+  // ★修正：品番編集と自由入力に対応
   openEdit: function(pinban) {
     app.editState = { existingImages: [], existingImageNames: [], newImagesBase64: [], newImageNames: [] };
     document.getElementById('input-camera').value = ""; 
     document.getElementById('input-file').value = ""; 
+    
+    // エラー表示を隠す
+    document.getElementById('edit-pinban-error').style.display = 'none';
 
     var p = null;
     if (pinban) { for(var i = 0; i < app.products.length; i++) { if(app.products[i].pinban === pinban) { p = app.products[i]; break; } } }
@@ -730,7 +741,8 @@ var app = {
 
     if (pinban && p) {
       document.getElementById('edit-title').innerText = '商品編集';
-      document.getElementById('edit-pinban').value = p.pinban;
+      document.getElementById('edit-original-pinban').value = p.pinban; // 変更前の品番を保持
+      document.getElementById('edit-pinban-input').value = p.pinban; // 画面に表示する品番
       document.getElementById('edit-name').value = p.name;
       document.getElementById('edit-size').value = p.size;
       document.getElementById('edit-point').value = p.point;
@@ -751,7 +763,8 @@ var app = {
       }
     } else {
       document.getElementById('edit-title').innerText = '商品新規登録';
-      document.getElementById('edit-pinban').value = '';
+      document.getElementById('edit-original-pinban').value = '';
+      document.getElementById('edit-pinban-input').value = '';
       document.getElementById('edit-name').value = '';
       document.getElementById('edit-size').value = '';
       document.getElementById('edit-point').value = '';
@@ -800,9 +813,26 @@ var app = {
     app.renderEditImagePreview(); 
   },
 
+  // ★修正：品番の重複チェックと自動生成ロジックを追加
   saveProduct: async function() {
+    let originalPinban = document.getElementById('edit-original-pinban').value;
+    let inputPinban = document.getElementById('edit-pinban-input').value.trim();
+
+    let finalPinban = "";
+    if (!originalPinban) {
+      // 新規登録の場合：入力された文字をプレフィックスにする（空ならITEM）
+      let prefix = inputPinban ? inputPinban : "ITEM";
+      // 末尾にハイフンがあれば消す（自動で付与するため）
+      prefix = prefix.replace(/-$/, "");
+      finalPinban = prefix + "-" + new Date().getTime().toString(16).toUpperCase();
+    } else {
+      // 編集の場合：入力されたものをそのまま使用（空なら元の品番）
+      finalPinban = inputPinban || originalPinban; 
+    }
+
     var data = {
-      pinban: document.getElementById('edit-pinban').value,
+      originalPinban: originalPinban,
+      pinban: finalPinban,
       name: document.getElementById('edit-name').value.trim(),
       size: document.getElementById('edit-size').value,
       point: document.getElementById('edit-point').value,
@@ -815,6 +845,8 @@ var app = {
     };
     
     app.showLoading(true, "保存中...");
+    document.getElementById('edit-pinban-error').style.display = 'none';
+
     try {
       await fetchGAS('saveProduct', { data: data, token: app.token });
       app.showLoading(false);
@@ -822,7 +854,13 @@ var app = {
       app.doSearch(); 
     } catch(err) {
       app.showLoading(false);
-      app.showAlert("エラーが発生しました:\n" + err.message);
+      // GAS側で重複が弾かれた場合のエラーハンドリング
+      if (err.message.includes("DUPLICATE_PINBAN")) {
+        document.getElementById('edit-pinban-error').style.display = 'block';
+        window.scrollTo(0, 0); // 画面上部へスクロールしてエラーを見せる
+      } else {
+        app.showAlert("エラーが発生しました:\n" + err.message);
+      }
     }
   }
 };
