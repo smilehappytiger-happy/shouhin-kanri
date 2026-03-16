@@ -813,20 +813,32 @@ var app = {
     app.renderEditImagePreview(); 
   },
 
-  // ★修正：品番の重複チェックと自動生成ロジックを追加
+  // ★修正：品番の3桁-3桁ルールと完全指定ルールの追加
   saveProduct: async function() {
     let originalPinban = document.getElementById('edit-original-pinban').value;
     let inputPinban = document.getElementById('edit-pinban-input').value.trim();
 
     let finalPinban = "";
+    
     if (!originalPinban) {
-      // 新規登録の場合：入力された文字をプレフィックスにする（空ならITEM）
-      let prefix = inputPinban ? inputPinban : "ITEM";
-      // 末尾にハイフンがあれば消す（自動で付与するため）
-      prefix = prefix.replace(/-$/, "");
-      finalPinban = prefix + "-" + new Date().getTime().toString(16).toUpperCase();
+      // 【新規登録の場合】
+      if (inputPinban) {
+        if (inputPinban.includes('-')) {
+          // ハイフンが含まれている場合（例: ICH-007）は、勝手に付け足さずそのまま使う
+          finalPinban = inputPinban;
+        } else {
+          // ハイフンが含まれていない場合（例: ICH）は、後ろに「3桁のランダム英数字」を付ける
+          const random3 = Math.random().toString(36).substring(2, 5).toUpperCase();
+          finalPinban = inputPinban + "-" + random3;
+        }
+      } else {
+        // 何も入力されなかった場合はデフォルトで「ITM-ランダム3桁」にする
+        const random3 = Math.random().toString(36).substring(2, 5).toUpperCase();
+        finalPinban = "ITM-" + random3;
+      }
     } else {
-      // 編集の場合：入力されたものをそのまま使用（空なら元の品番）
+      // 【編集の場合】
+      // 入力されたものを使う（空っぽにされたら元の品番を維持）
       finalPinban = inputPinban || originalPinban; 
     }
 
@@ -863,7 +875,6 @@ var app = {
       }
     }
   }
-};
 
 window.addEventListener('DOMContentLoaded', function() {
   const urlParams = new URLSearchParams(window.location.search);
