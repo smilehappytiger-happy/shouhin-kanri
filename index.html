@@ -76,6 +76,18 @@
   </div>
 </div>
 
+<div id="custom-confirm" class="custom-alert-overlay">
+  <div class="custom-alert-box">
+    <h4 class="mb-3 text-danger fw-bold"><i class="bi bi-trash3-fill me-2"></i>削除の確認</h4>
+    <p class="mb-3" style="font-size: 1.1rem; font-weight: bold; color: #333;">本当にデータベースから<br>完全に削除しますか？</p>
+    <p class="mb-4 text-muted" style="font-size: 0.85rem;">※この操作は取り消せません。</p>
+    <div class="d-flex gap-2">
+      <button class="btn btn-secondary flex-grow-1" style="padding: 1rem; font-weight: bold;" onclick="app.closeConfirm(false)">キャンセル</button>
+      <button class="btn btn-danger flex-grow-1" style="padding: 1rem; font-weight: bold;" onclick="app.closeConfirm(true)">削除する</button>
+    </div>
+  </div>
+</div>
+
 <nav class="navbar navbar-dark bg-primary" style="background: linear-gradient(135deg, #4dabf7, #1971c2) !important;">
   <div class="container-fluid">
     <span class="navbar-brand mb-0 h1" id="nav-title" onclick="app.goHome()" style="cursor:pointer; font-weight: bold;">管理システム</span>
@@ -290,7 +302,7 @@
 // ====================================================================
 // ★ Vercelフロントエンド 最終完全版スクリプト (物理削除・アーカイブボタン実装版)
 // ====================================================================
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwuOZBthzD2iNfc3hA1BuymgkcIXRaxZYuBcOAjYNu5ux9chCwIUA8rGtBOIkdnxmiMeA/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzaR4td7C59ty30-R5NYdgmiIwKRDIYR-g4g5AhwvgrWyHzmVM3cM7MplOiZNJ-MeVqwA/exec";
 const SHOP_EMAIL = "shop@example.com"; 
 
 async function fetchGAS(action, payload = {}) {
@@ -338,6 +350,7 @@ var app = {
   currentProduct: null,
   editState: { existingImages: [], existingImageNames: [], newImagesBase64: [], newImageNames: [] },
   alertCallback: null,
+  confirmCallback: null, // ★追加：確認ポップアップ用のコールバック
   
   currentTypeFilter: "all",
   currentLengthFilter: "all",
@@ -363,6 +376,20 @@ var app = {
   closeAlert: function() {
     document.getElementById('custom-alert').style.display = 'none';
     if(app.alertCallback) { var cb = app.alertCallback; app.alertCallback = null; cb(); }
+  },
+
+  // ★ 追加：オシャレな確認ポップアップの表示・非表示ロジック
+  showConfirm: function(callback) {
+    document.getElementById('custom-confirm').style.display = 'flex';
+    app.confirmCallback = callback;
+  },
+  closeConfirm: function(isConfirmed) {
+    document.getElementById('custom-confirm').style.display = 'none';
+    if(app.confirmCallback) { 
+      var cb = app.confirmCallback; 
+      app.confirmCallback = null; 
+      cb(isConfirmed); 
+    }
   },
 
   showView: function(viewId) {
@@ -828,32 +855,31 @@ var app = {
     app.renderEditImagePreview(); 
   },
 
-  // ★ 追加：物理削除を実行する関数
-  deleteProduct: async function() {
+  // ★ 追加・修正：オシャレなポップアップで確認し、安全に物理削除を実行する
+  deleteProduct: function() {
     let pinban = document.getElementById('edit-original-pinban').value;
     if (!pinban) return; 
     
-    // 確認のポップアップ
-    if (!confirm("本当にデータベースから完全に削除しますか？\n※この操作は取り消せません。")) {
-      return;
-    }
-    
-    app.showLoading(true, "削除中...");
-    try {
-      await fetchGAS('deleteProduct', { pinban: pinban, token: app.token });
-      app.showLoading(false);
-      app.showToast("商品を完全に削除しました");
+    app.showConfirm(async function(isConfirmed) {
+      if (!isConfirmed) return; // キャンセルが押されたら何もしない
       
-      // 削除後は一覧画面に戻ってリロードする
-      app.doSearch();
-      app.showView('view-list');
-    } catch(err) {
-      app.showLoading(false);
-      app.showAlert("削除エラー:\n" + err.message);
-    }
+      app.showLoading(true, "削除中...");
+      try {
+        await fetchGAS('deleteProduct', { pinban: pinban, token: app.token });
+        app.showLoading(false);
+        app.showToast("商品を完全に削除しました");
+        
+        // 削除後は一覧画面に戻ってリロード
+        app.doSearch();
+        app.showView('view-list');
+      } catch(err) {
+        app.showLoading(false);
+        app.showAlert("削除エラー:\n" + err.message);
+      }
+    });
   },
 
-  // ★ 修正：isArchive（アーカイブ保存か否か）を受け取る
+  // ★ 修正：isArchiveフラグを受け取り、エラー時はポップアップのみ表示
   saveProduct: async function(isArchive = false) {
     let originalPinban = document.getElementById('edit-original-pinban').value;
     let inputPinban = document.getElementById('edit-pinban-input').value.trim();
@@ -875,7 +901,6 @@ var app = {
       finalPinban = inputPinban || originalPinban; 
     }
 
-    // ★ アーカイブボタンが押された場合はステータスを強制的に「非公開」にする
     let statusVal = document.querySelector('input[name="edit-status"]:checked').value;
     if (isArchive === true) {
       statusVal = "非公開";
@@ -908,10 +933,10 @@ var app = {
       }
       
       app.doSearch(); 
-      app.showView('view-list'); // ★ 保存後は自動的に一覧画面に戻る
+      app.showView('view-list'); 
     } catch(err) {
       app.showLoading(false);
-      // DOM操作を一切行わず、安全なアラートのみで警告
+      // DOMエラーの原因になっていた赤枠のコードを完全消去。アラートのみ！
       if (err.message.includes("DUPLICATE_PINBAN")) {
         window.scrollTo(0, 0); 
         app.showAlert("【エラー】\n既存の品番と重複しています！\n別の品番に変更して再度保存してください。");
@@ -1020,4 +1045,4 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 </body>
-</html>
+</html>  
