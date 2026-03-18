@@ -40,6 +40,19 @@
     .fav-btn { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; justify-content: center; }
     .fav-btn:active { transform: scale(0.8); }
     
+    /* ★ 追加：ふわふわ浮遊するアニメーション */
+    @keyframes floating {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-15px); }
+      100% { transform: translateY(0px); }
+    }
+    .floating-logo {
+      width: 130px; /* ここで画像の大きさを調整できます */
+      height: auto;
+      animation: floating 2.5s ease-in-out infinite;
+      margin-bottom: 20px;
+    }
+
     @media (max-width: 768px) {
       .thumbnail-img { height: 160px; }
       .search-input-huge { padding: 1rem !important; font-size: 1rem !important; border-radius: 8px 0 0 8px !important; }
@@ -50,14 +63,16 @@
       .filter-btn { font-size: 0.85rem !important; padding: 0.3rem 0.8rem !important; }
       .card-body { padding: 0.8rem !important; }
       .card-title { font-size: 1rem !important; }
+      .floating-logo { width: 100px; } /* スマホでの画像サイズ */
     }
   </style>
 </head>
 <body>
 
 <div id="init-splash">
-  <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;"></div>
-  <h4 class="mt-4 fw-bold text-secondary">システムを起動中...</h4>
+  <img src="./logo.png" alt="起動中ロゴ" class="floating-logo" onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png';">
+  
+  <h4 class="mt-2 fw-bold text-secondary" style="letter-spacing: 2px;">システムを起動中...</h4>
 </div>
 
 <div class="loading-overlay" id="loading">
@@ -300,7 +315,7 @@
 
 <script>
 // ====================================================================
-// ★ Vercelフロントエンド 最終完全版スクリプト (物理削除・アーカイブボタン実装版)
+// ★ Vercelフロントエンド 最終完全版スクリプト (物理削除・アーカイブ・ふわふわロゴ対応版)
 // ====================================================================
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzaR4td7C59ty30-R5NYdgmiIwKRDIYR-g4g5AhwvgrWyHzmVM3cM7MplOiZNJ-MeVqwA/exec";
 const SHOP_EMAIL = "shop@example.com"; 
@@ -350,7 +365,7 @@ var app = {
   currentProduct: null,
   editState: { existingImages: [], existingImageNames: [], newImagesBase64: [], newImageNames: [] },
   alertCallback: null,
-  confirmCallback: null, // ★追加：確認ポップアップ用のコールバック
+  confirmCallback: null, 
   
   currentTypeFilter: "all",
   currentLengthFilter: "all",
@@ -378,7 +393,6 @@ var app = {
     if(app.alertCallback) { var cb = app.alertCallback; app.alertCallback = null; cb(); }
   },
 
-  // ★ 追加：オシャレな確認ポップアップの表示・非表示ロジック
   showConfirm: function(callback) {
     document.getElementById('custom-confirm').style.display = 'flex';
     app.confirmCallback = callback;
@@ -648,7 +662,6 @@ var app = {
       col.className = 'col-6 col-md-4 col-lg-3';
       var html = '<div class="card h-100 shadow-sm position-relative" style="cursor:pointer; border-radius:12px; border:none; transition: transform 0.2s;" onclick="app.showDetail(\'' + p.pinban + '\')">';
       
-      // ★ アーカイブのオレンジバッジ
       if (p.status === "Sold Out") html += '<div class="status-badge bg-danger">Sold Out</div>';
       else if (p.status === "商談中") html += '<div class="status-badge bg-success">商談中</div>';
       else if (p.status === "非公開") html += '<div class="status-badge text-white" style="background: linear-gradient(135deg, #fd7e14, #e8590c); box-shadow: 0 4px 10px rgba(253, 126, 20, 0.4);"><i class="bi bi-archive-fill me-1"></i>アーカイブ</div>';
@@ -693,7 +706,6 @@ var app = {
 
     var statusArea = document.getElementById('detail-status-area');
     statusArea.innerHTML = '';
-    // ★ 詳細画面用のオレンジバッジ
     if (p.status === "Sold Out") statusArea.innerHTML = '<span class="badge bg-danger p-2">Sold Out</span>';
     else if (p.status === "商談中") statusArea.innerHTML = '<span class="badge bg-success p-2">商談中</span>';
     else if (p.status === "非公開") statusArea.innerHTML = '<span class="badge text-white p-2" style="background: linear-gradient(135deg, #fd7e14, #e8590c);"><i class="bi bi-archive-fill me-1"></i>アーカイブ</span>';
@@ -795,7 +807,6 @@ var app = {
         } 
       }
       
-      // ★ 既存商品の編集時のみ、完全削除ボタンを表示する
       const deleteBtn = document.getElementById('btn-delete-product');
       if (deleteBtn) deleteBtn.style.display = 'block';
 
@@ -810,7 +821,6 @@ var app = {
       
       document.getElementById('status-sale').checked = true;
 
-      // ★ 新規登録時は完全削除ボタンを隠す
       const deleteBtn = document.getElementById('btn-delete-product');
       if (deleteBtn) deleteBtn.style.display = 'none';
     }
@@ -855,13 +865,12 @@ var app = {
     app.renderEditImagePreview(); 
   },
 
-  // ★ 追加・修正：オシャレなポップアップで確認し、安全に物理削除を実行する
   deleteProduct: function() {
     let pinban = document.getElementById('edit-original-pinban').value;
     if (!pinban) return; 
     
     app.showConfirm(async function(isConfirmed) {
-      if (!isConfirmed) return; // キャンセルが押されたら何もしない
+      if (!isConfirmed) return; 
       
       app.showLoading(true, "削除中...");
       try {
@@ -869,7 +878,6 @@ var app = {
         app.showLoading(false);
         app.showToast("商品を完全に削除しました");
         
-        // 削除後は一覧画面に戻ってリロード
         app.doSearch();
         app.showView('view-list');
       } catch(err) {
@@ -879,7 +887,6 @@ var app = {
     });
   },
 
-  // ★ 修正：isArchiveフラグを受け取り、エラー時はポップアップのみ表示
   saveProduct: async function(isArchive = false) {
     let originalPinban = document.getElementById('edit-original-pinban').value;
     let inputPinban = document.getElementById('edit-pinban-input').value.trim();
@@ -936,7 +943,6 @@ var app = {
       app.showView('view-list'); 
     } catch(err) {
       app.showLoading(false);
-      // DOMエラーの原因になっていた赤枠のコードを完全消去。アラートのみ！
       if (err.message.includes("DUPLICATE_PINBAN")) {
         window.scrollTo(0, 0); 
         app.showAlert("【エラー】\n既存の品番と重複しています！\n別の品番に変更して再度保存してください。");
@@ -1045,4 +1051,4 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 </body>
-</html>  
+</html>
