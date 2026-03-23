@@ -40,14 +40,13 @@
     .fav-btn { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; justify-content: center; }
     .fav-btn:active { transform: scale(0.8); }
     
-    /* ★ 追加：ふわふわ浮遊するアニメーション */
     @keyframes floating {
       0% { transform: translateY(0px); }
       50% { transform: translateY(-15px); }
       100% { transform: translateY(0px); }
     }
     .floating-logo {
-      width: 130px; /* ここで画像の大きさを調整できます */
+      width: 130px;
       height: auto;
       animation: floating 2.5s ease-in-out infinite;
       margin-bottom: 20px;
@@ -63,7 +62,7 @@
       .filter-btn { font-size: 0.85rem !important; padding: 0.3rem 0.8rem !important; }
       .card-body { padding: 0.8rem !important; }
       .card-title { font-size: 1rem !important; }
-      .floating-logo { width: 100px; } /* スマホでの画像サイズ */
+      .floating-logo { width: 100px; }
     }
   </style>
 </head>
@@ -71,7 +70,6 @@
 
 <div id="init-splash">
   <img src="./logo.png" alt="起動中ロゴ" class="floating-logo" onerror="this.onerror=null; this.src='https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2601.png';">
-  
   <h4 class="mt-2 fw-bold text-secondary" style="letter-spacing: 2px;">システムを起動中...</h4>
 </div>
 
@@ -315,9 +313,9 @@
 
 <script>
 // ====================================================================
-// ★ Vercelフロントエンド 最終完全版スクリプト (物理削除・アーカイブ・ふわふわロゴ対応版)
+// ★ Vercelフロントエンド 最終完全版スクリプト (画像WebP＆800px縮小対応版)
 // ====================================================================
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzaR4td7C59ty30-R5NYdgmiIwKRDIYR-g4g5AhwvgrWyHzmVM3cM7MplOiZNJ-MeVqwA/exec";
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz7JlvnplWhKgSglKqfXmeNAKVMotY7uH27QL3as7mzXs5-ny0iZ_1tYWKQWtHDlCMt9w/exec";
 const SHOP_EMAIL = "shop@example.com"; 
 
 async function fetchGAS(action, payload = {}) {
@@ -1003,8 +1001,10 @@ window.addEventListener('DOMContentLoaded', function() {
     
     app.showLoading(true, "画像を処理中...");
     var processedCount = 0;
-    var MAX_WIDTH = 1200;
-    var MAX_HEIGHT = 1200;
+    
+    // ★ 変更箇所：画像の最大サイズを800pxに縮小し軽量化
+    var MAX_WIDTH = 800;
+    var MAX_HEIGHT = 800;
 
     Array.prototype.forEach.call(files, function(file) {
       var baseName = file.name.replace(/\.[^/.]+$/, "");
@@ -1026,7 +1026,9 @@ window.addEventListener('DOMContentLoaded', function() {
           canvas.width = width; canvas.height = height;
           var ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          
+          // ★ 変更箇所：フォーマットをWebP化し、画質を0.75に最適化
+          var dataUrl = canvas.toDataURL('image/webp', 0.75);
           
           app.editState.newImagesBase64.push(dataUrl);
           app.editState.newImageNames.push(baseName);
@@ -1052,4 +1054,3 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-
